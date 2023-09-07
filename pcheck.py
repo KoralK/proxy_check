@@ -1,17 +1,26 @@
 import requests
+import time
 
 def check_proxy(ip, port):
     proxies = {
         "http": f"socks5://{ip}:{port}",
         "https": f"socks5://{ip}:{port}",
     }
+    
+    start_time = time.time()  # Start the timer
+    
     try:
-        response = requests.get("http://www.google.com", proxies=proxies, timeout=10)  # increased timeout
+        response = requests.get("http://www.google.com", proxies=proxies, timeout=10)
+        elapsed_time = time.time() - start_time  # Calculate the elapsed time
         if response.status_code == 200:
-            return True
+            print(f"Proxy {ip}:{port} took {elapsed_time:.2f} seconds to respond.")
+            return True, elapsed_time
     except requests.RequestException as e:
         print(f"Error for proxy {ip}:{port} - {e}")
-    return False
+        return False, None
+    finally:
+        if 'elapsed_time' in locals():
+            print(f"Proxy {ip}:{port} took {elapsed_time:.2f} seconds for the entire process.")
 
 if __name__ == "__main__":
     proxy_list = [
@@ -50,13 +59,14 @@ if __name__ == "__main__":
     alive_proxies = []
 
     for ip, port in proxy_list:
-        if check_proxy(ip, port):
+        is_alive, response_time = check_proxy(ip, port)
+        if is_alive:
             print(f"Proxy {ip}:{port} is alive!")
-            alive_proxies.append((ip, port))
+            alive_proxies.append((ip, port, response_time))
         else:
             print(f"Proxy {ip}:{port} is down or not working.")
 
-    # Write the alive proxies to a file
+    # Write the alive proxies with their response times to a file
     with open("alive_proxies.txt", "w") as file:
-        for ip, port in alive_proxies:
-            file.write(f"{ip}:{port}\n")
+        for ip, port, response_time in alive_proxies:
+            file.write(f"{ip}:{port} - {response_time:.2f} seconds\n")
